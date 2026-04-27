@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "pqD-Ls20_cZD_g_S6RUS0"
+uri = "file://tuananhproxy-project.zip"
+type = "unspecified"
+title = "TUANANHPROXY — full source code (ZIP)"
