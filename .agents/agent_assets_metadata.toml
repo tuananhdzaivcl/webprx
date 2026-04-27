@@ -6,3 +6,15 @@ id = "pqD-Ls20_cZD_g_S6RUS0"
 uri = "file://tuananhproxy-project.zip"
 type = "unspecified"
 title = "TUANANHPROXY — full source code (ZIP)"
+
+[[outputs]]
+id = "hyvVuwYgCNCoLYtFh2hmr"
+uri = "file://tuananhproxy-part1-frontend.zip"
+type = "unspecified"
+title = "Phần 1 — Frontend (artifacts/)"
+
+[[outputs]]
+id = "J5n1EN8E_hvYyB_uTMpzB"
+uri = "file://tuananhproxy-part2-backend.zip"
+type = "unspecified"
+title = "Phần 2 — Backend & lib (lib/)"
