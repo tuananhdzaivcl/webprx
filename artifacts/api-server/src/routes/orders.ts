@@ -2,11 +2,12 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import {
   ordersTable,
+  productKeysTable,
   productsTable,
   transactionsTable,
   usersTable,
 } from "@workspace/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { CreateOrderBody as CreateOrderRequest } from "@workspace/api-zod";
 import { requireAuth, generateOrderCode } from "../lib/auth";
 
@@ -44,10 +45,21 @@ router.post("/orders", requireAuth(), async (req, res) => {
     return;
   }
   const product = found[0]!;
-  if (product.stock <= 0) {
+
+  const allKeys = await db.select().from(productKeysTable).where(eq(productKeysTable.productId, productId));
+  const availableKeys = allKeys.filter((k) => !k.isUsed);
+  const hasKeyPool = allKeys.length > 0;
+
+  if (hasKeyPool) {
+    if (availableKeys.length === 0) {
+      res.status(400).json({ error: "Sản phẩm đã hết hàng" });
+      return;
+    }
+  } else if (product.stock <= 0) {
     res.status(400).json({ error: "Sản phẩm đã hết hàng" });
     return;
   }
+
   const price = Number(product.price);
   const balance = Number(req.user!.balance);
   if (balance < price) {
@@ -56,11 +68,37 @@ router.post("/orders", requireAuth(), async (req, res) => {
   }
   const newBalance = balance - price;
   await db.update(usersTable).set({ balance: newBalance.toFixed(2) }).where(eq(usersTable.id, req.user!.id));
-  await db
-    .update(productsTable)
-    .set({ stock: product.stock - 1, sold: product.sold + 1 })
-    .where(eq(productsTable.id, product.id));
-  const code = generateOrderCode();
+
+  let code: string;
+  if (hasKeyPool) {
+    const sorted = await db
+      .select()
+      .from(productKeysTable)
+      .where(and(eq(productKeysTable.productId, productId), eq(productKeysTable.isUsed, false)))
+      .orderBy(asc(productKeysTable.id))
+      .limit(1);
+    if (sorted.length === 0) {
+      res.status(400).json({ error: "Sản phẩm đã hết hàng" });
+      return;
+    }
+    code = sorted[0]!.keyValue;
+    await db
+      .update(productKeysTable)
+      .set({ isUsed: true, usedAt: new Date() })
+      .where(eq(productKeysTable.id, sorted[0]!.id));
+    const remaining = availableKeys.length - 1;
+    await db
+      .update(productsTable)
+      .set({ stock: remaining, sold: product.sold + 1 })
+      .where(eq(productsTable.id, product.id));
+  } else {
+    code = generateOrderCode();
+    await db
+      .update(productsTable)
+      .set({ stock: product.stock - 1, sold: product.sold + 1 })
+      .where(eq(productsTable.id, product.id));
+  }
+
   const inserted = await db
     .insert(ordersTable)
     .values({
@@ -72,6 +110,15 @@ router.post("/orders", requireAuth(), async (req, res) => {
       code,
     })
     .returning();
+
+  if (hasKeyPool) {
+    const orderId = inserted[0]!.id;
+    await db
+      .update(productKeysTable)
+      .set({ usedByOrderId: orderId })
+      .where(and(eq(productKeysTable.keyValue, code), eq(productKeysTable.productId, product.id)));
+  }
+
   await db.insert(transactionsTable).values({
     userId: req.user!.id,
     type: "purchase",

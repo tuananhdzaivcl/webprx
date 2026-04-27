@@ -7,6 +7,7 @@
  */
 
 export * from "./accountSummary";
+export * from "./addProductKeysRequest";
 export * from "./adjustBalanceRequest";
 export * from "./adminStats";
 export * from "./adminUser";
@@ -20,6 +21,8 @@ export * from "./loginRequest";
 export * from "./ok";
 export * from "./order";
 export * from "./product";
+export * from "./productKey";
+export * from "./productKeyList";
 export * from "./referralEntry";
 export * from "./referralSummary";
 export * from "./registerRequest";

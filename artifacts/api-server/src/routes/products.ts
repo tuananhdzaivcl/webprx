@@ -1,13 +1,31 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { categoriesTable, productsTable } from "@workspace/db/schema";
+import { categoriesTable, productKeysTable, productsTable } from "@workspace/db/schema";
 import { asc, eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+async function computeStockMap(): Promise<Record<number, { available: number; hasPool: boolean }>> {
+  const all = await db.select().from(productKeysTable);
+  const map: Record<number, { available: number; hasPool: boolean }> = {};
+  for (const k of all) {
+    if (!map[k.productId]) map[k.productId] = { available: 0, hasPool: false };
+    map[k.productId]!.hasPool = true;
+    if (!k.isUsed) map[k.productId]!.available += 1;
+  }
+  return map;
+}
+
+function effectiveStock(p: { id: number; stock: number }, m: Record<number, { available: number; hasPool: boolean }>) {
+  const e = m[p.id];
+  if (e?.hasPool) return e.available;
+  return p.stock;
+}
+
 router.get("/products", async (_req, res) => {
   const cats = await db.select().from(categoriesTable).orderBy(asc(categoriesTable.sortOrder));
   const prods = await db.select().from(productsTable).orderBy(asc(productsTable.id));
+  const stockMap = await computeStockMap();
   const out = cats.map((c) => ({
     id: c.id,
     name: c.name,
@@ -21,7 +39,7 @@ router.get("/products", async (_req, res) => {
         name: p.name,
         description: p.description,
         price: Number(p.price),
-        stock: p.stock,
+        stock: effectiveStock(p, stockMap),
         sold: p.sold,
         imageUrl: p.imageUrl,
         active: p.active,
@@ -43,6 +61,7 @@ router.get("/products/:id", async (req, res) => {
   }
   const p = found[0]!;
   const cat = await db.select().from(categoriesTable).where(eq(categoriesTable.id, p.categoryId)).limit(1);
+  const stockMap = await computeStockMap();
   res.json({
     id: p.id,
     categoryId: p.categoryId,
@@ -50,7 +69,7 @@ router.get("/products/:id", async (req, res) => {
     name: p.name,
     description: p.description,
     price: Number(p.price),
-    stock: p.stock,
+    stock: effectiveStock(p, stockMap),
     sold: p.sold,
     imageUrl: p.imageUrl,
     active: p.active,

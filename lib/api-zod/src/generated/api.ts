@@ -385,6 +385,72 @@ export const AdminDeleteProductResponse = zod.object({
 });
 
 /**
+ * @summary List proxy keys in stock for a product
+ */
+export const AdminListProductKeysParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminListProductKeysResponse = zod.object({
+  productId: zod.number(),
+  totalKeys: zod.number(),
+  availableKeys: zod.number(),
+  usedKeys: zod.number(),
+  keys: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number(),
+      keyValue: zod.string(),
+      isUsed: zod.boolean(),
+      usedByOrderId: zod.number().nullish(),
+      createdAt: zod.string(),
+      usedAt: zod.string().nullish(),
+    }),
+  ),
+});
+
+/**
+ * @summary Add proxy keys to product stock (one per line)
+ */
+export const AdminAddProductKeysParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminAddProductKeysBody = zod.object({
+  keys: zod.string().describe("Newline-separated list of proxy keys"),
+});
+
+export const AdminAddProductKeysResponse = zod.object({
+  productId: zod.number(),
+  totalKeys: zod.number(),
+  availableKeys: zod.number(),
+  usedKeys: zod.number(),
+  keys: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number(),
+      keyValue: zod.string(),
+      isUsed: zod.boolean(),
+      usedByOrderId: zod.number().nullish(),
+      createdAt: zod.string(),
+      usedAt: zod.string().nullish(),
+    }),
+  ),
+});
+
+/**
+ * @summary Delete a single (unused) proxy key
+ */
+export const AdminDeleteProductKeyParams = zod.object({
+  id: zod.coerce.number(),
+  keyId: zod.coerce.number(),
+});
+
+export const AdminDeleteProductKeyResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
  * @summary Admin overview stats
  */
 export const AdminStatsResponse = zod.object({

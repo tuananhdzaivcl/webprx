@@ -419,6 +419,72 @@ paths:
               schema:
                 $ref: "#/components/schemas/Ok"
 
+  /admin/products/{id}/keys:
+    get:
+      operationId: adminListProductKeys
+      tags: [admin]
+      summary: List proxy keys in stock for a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductKeyList"
+    post:
+      operationId: adminAddProductKeys
+      tags: [admin]
+      summary: Add proxy keys to product stock (one per line)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddProductKeysRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductKeyList"
+
+  /admin/products/{id}/keys/{keyId}:
+    delete:
+      operationId: adminDeleteProductKey
+      tags: [admin]
+      summary: Delete a single (unused) proxy key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+
   /admin/stats:
     get:
       operationId: adminStats
@@ -704,6 +770,52 @@ components:
           description: Positive to add, negative to subtract
         reason:
           type: string
+
+    ProductKey:
+      type: object
+      required: [id, productId, keyValue, isUsed, createdAt]
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        keyValue:
+          type: string
+        isUsed:
+          type: boolean
+        usedByOrderId:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+        usedAt:
+          type: string
+          nullable: true
+
+    ProductKeyList:
+      type: object
+      required: [productId, totalKeys, availableKeys, usedKeys, keys]
+      properties:
+        productId:
+          type: integer
+        totalKeys:
+          type: integer
+        availableKeys:
+          type: integer
+        usedKeys:
+          type: integer
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductKey"
+
+    AddProductKeysRequest:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: string
+          description: Newline-separated list of proxy keys
 
     AdminStats:
       type: object

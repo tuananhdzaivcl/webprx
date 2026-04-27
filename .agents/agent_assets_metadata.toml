@@ -11,10 +11,10 @@ title = "TUANANHPROXY — full source code (ZIP)"
 id = "hyvVuwYgCNCoLYtFh2hmr"
 uri = "file://tuananhproxy-part1-frontend.zip"
 type = "unspecified"
-title = "Phần 1 — Frontend (artifacts/)"
+title = "TUANANHPROXY — Frontend (part 1/2)"
 
 [[outputs]]
 id = "J5n1EN8E_hvYyB_uTMpzB"
 uri = "file://tuananhproxy-part2-backend.zip"
 type = "unspecified"
-title = "Phần 2 — Backend & lib (lib/)"
+title = "TUANANHPROXY — Backend + shared libs (part 2/2)"

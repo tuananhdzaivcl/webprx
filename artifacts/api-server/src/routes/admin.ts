@@ -1,16 +1,19 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import {
+  categoriesTable,
   depositsTable,
   ordersTable,
+  productKeysTable,
   productsTable,
   referralCommissionsTable,
   transactionsTable,
   usersTable,
 } from "@workspace/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import {
   AdminAdjustBalanceBody as AdjustBalanceRequest,
+  AdminAddProductKeysBody as AddProductKeysRequest,
   AdminCreateProductBody,
   AdminUpdateProductBody,
 } from "@workspace/api-zod";
@@ -210,13 +213,29 @@ router.post("/admin/deposits/:id/reject", requireAdmin(), async (req, res) => {
   });
 });
 
+async function computeStockMap(): Promise<Record<number, { available: number; hasPool: boolean }>> {
+  const all = await db.select().from(productKeysTable);
+  const map: Record<number, { available: number; hasPool: boolean }> = {};
+  for (const k of all) {
+    if (!map[k.productId]) map[k.productId] = { available: 0, hasPool: false };
+    map[k.productId]!.hasPool = true;
+    if (!k.isUsed) map[k.productId]!.available += 1;
+  }
+  return map;
+}
+
+function effectiveStock(p: { id: number; stock: number }, m: Record<number, { available: number; hasPool: boolean }>) {
+  const e = m[p.id];
+  if (e?.hasPool) return e.available;
+  return p.stock;
+}
+
 router.get("/admin/products", requireAdmin(), async (_req, res) => {
   const products = await db.select().from(productsTable).orderBy(desc(productsTable.id));
-  const cats = await db.select().from(productsTable);
-  void cats;
-  const cattable = await import("@workspace/db/schema").then((m) => db.select().from(m.categoriesTable));
+  const cattable = await db.select().from(categoriesTable);
   const catMap: Record<number, string> = {};
   for (const c of cattable) catMap[c.id] = c.name;
+  const stockMap = await computeStockMap();
   res.json(
     products.map((p) => ({
       id: p.id,
@@ -225,12 +244,136 @@ router.get("/admin/products", requireAdmin(), async (_req, res) => {
       name: p.name,
       description: p.description,
       price: Number(p.price),
-      stock: p.stock,
+      stock: effectiveStock(p, stockMap),
       sold: p.sold,
       imageUrl: p.imageUrl,
       active: p.active,
     })),
   );
+});
+
+router.get("/admin/products/:id/keys", requireAdmin(), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "ID không hợp lệ" });
+    return;
+  }
+  const keys = await db
+    .select()
+    .from(productKeysTable)
+    .where(eq(productKeysTable.productId, id))
+    .orderBy(desc(productKeysTable.id));
+  const used = keys.filter((k) => k.isUsed).length;
+  res.json({
+    productId: id,
+    totalKeys: keys.length,
+    availableKeys: keys.length - used,
+    usedKeys: used,
+    keys: keys.map((k) => ({
+      id: k.id,
+      productId: k.productId,
+      keyValue: k.keyValue,
+      isUsed: k.isUsed,
+      usedByOrderId: k.usedByOrderId,
+      createdAt: k.createdAt.toISOString(),
+      usedAt: k.usedAt ? k.usedAt.toISOString() : null,
+    })),
+  });
+});
+
+router.post("/admin/products/:id/keys", requireAdmin(), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "ID không hợp lệ" });
+    return;
+  }
+  const product = await db.select().from(productsTable).where(eq(productsTable.id, id)).limit(1);
+  if (product.length === 0) {
+    res.status(404).json({ error: "Không tìm thấy sản phẩm" });
+    return;
+  }
+  const parsed = AddProductKeysRequest.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dữ liệu không hợp lệ" });
+    return;
+  }
+  const lines = parsed.data.keys
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  const seen = new Set<string>();
+  const existing = await db
+    .select()
+    .from(productKeysTable)
+    .where(eq(productKeysTable.productId, id));
+  for (const e of existing) seen.add(e.keyValue);
+  const toInsert = [];
+  for (const line of lines) {
+    if (seen.has(line)) continue;
+    seen.add(line);
+    toInsert.push({ productId: id, keyValue: line });
+  }
+  if (toInsert.length > 0) {
+    await db.insert(productKeysTable).values(toInsert);
+  }
+  const all = await db
+    .select()
+    .from(productKeysTable)
+    .where(eq(productKeysTable.productId, id))
+    .orderBy(desc(productKeysTable.id));
+  const used = all.filter((k) => k.isUsed).length;
+  await db
+    .update(productsTable)
+    .set({ stock: all.length - used })
+    .where(eq(productsTable.id, id));
+  res.json({
+    productId: id,
+    totalKeys: all.length,
+    availableKeys: all.length - used,
+    usedKeys: used,
+    keys: all.map((k) => ({
+      id: k.id,
+      productId: k.productId,
+      keyValue: k.keyValue,
+      isUsed: k.isUsed,
+      usedByOrderId: k.usedByOrderId,
+      createdAt: k.createdAt.toISOString(),
+      usedAt: k.usedAt ? k.usedAt.toISOString() : null,
+    })),
+  });
+});
+
+router.delete("/admin/products/:id/keys/:keyId", requireAdmin(), async (req, res) => {
+  const productId = Number(req.params.id);
+  const keyId = Number(req.params.keyId);
+  if (!Number.isFinite(productId) || !Number.isFinite(keyId)) {
+    res.status(400).json({ error: "ID không hợp lệ" });
+    return;
+  }
+  const found = await db
+    .select()
+    .from(productKeysTable)
+    .where(and(eq(productKeysTable.id, keyId), eq(productKeysTable.productId, productId)))
+    .limit(1);
+  if (found.length === 0) {
+    res.status(404).json({ error: "Không tìm thấy key" });
+    return;
+  }
+  if (found[0]!.isUsed) {
+    res.status(400).json({ error: "Không thể xoá key đã được sử dụng" });
+    return;
+  }
+  await db.delete(productKeysTable).where(eq(productKeysTable.id, keyId));
+  const all = await db
+    .select()
+    .from(productKeysTable)
+    .where(eq(productKeysTable.productId, productId));
+  const used = all.filter((k) => k.isUsed).length;
+  await db
+    .update(productsTable)
+    .set({ stock: all.length - used })
+    .where(eq(productsTable.id, productId));
+  res.json({ ok: true });
 });
 
 router.post("/admin/products", requireAdmin(), async (req, res) => {
@@ -252,8 +395,9 @@ router.post("/admin/products", requireAdmin(), async (req, res) => {
     })
     .returning();
   const p = inserted[0]!;
-  const cattable = await import("@workspace/db/schema").then((m) => db.select().from(m.categoriesTable));
+  const cattable = await db.select().from(categoriesTable);
   const cat = cattable.find((c) => c.id === p.categoryId);
+  const stockMap = await computeStockMap();
   res.json({
     id: p.id,
     categoryId: p.categoryId,
@@ -261,7 +405,7 @@ router.post("/admin/products", requireAdmin(), async (req, res) => {
     name: p.name,
     description: p.description,
     price: Number(p.price),
-    stock: p.stock,
+    stock: effectiveStock(p, stockMap),
     sold: p.sold,
     imageUrl: p.imageUrl,
     active: p.active,
@@ -293,8 +437,9 @@ router.patch("/admin/products/:id", requireAdmin(), async (req, res) => {
     return;
   }
   const p = found[0]!;
-  const cattable = await import("@workspace/db/schema").then((m) => db.select().from(m.categoriesTable));
+  const cattable = await db.select().from(categoriesTable);
   const cat = cattable.find((c) => c.id === p.categoryId);
+  const stockMap = await computeStockMap();
   res.json({
     id: p.id,
     categoryId: p.categoryId,
@@ -302,7 +447,7 @@ router.patch("/admin/products/:id", requireAdmin(), async (req, res) => {
     name: p.name,
     description: p.description,
     price: Number(p.price),
-    stock: p.stock,
+    stock: effectiveStock(p, stockMap),
     sold: p.sold,
     imageUrl: p.imageUrl,
     active: p.active,

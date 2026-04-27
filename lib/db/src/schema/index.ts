@@ -75,6 +75,16 @@ export const transactionsTable = pgTable("transactions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const productKeysTable = pgTable("product_keys", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull(),
+  keyValue: text("key_value").notNull(),
+  isUsed: boolean("is_used").notNull().default(false),
+  usedByOrderId: integer("used_by_order_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+});
+
 export const referralCommissionsTable = pgTable("referral_commissions", {
   id: serial("id").primaryKey(),
   referrerId: integer("referrer_id").notNull(),

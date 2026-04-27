@@ -147,6 +147,29 @@ export interface AdjustBalanceRequest {
   reason: string;
 }
 
+export interface ProductKey {
+  id: number;
+  productId: number;
+  keyValue: string;
+  isUsed: boolean;
+  usedByOrderId?: number | null;
+  createdAt: string;
+  usedAt?: string | null;
+}
+
+export interface ProductKeyList {
+  productId: number;
+  totalKeys: number;
+  availableKeys: number;
+  usedKeys: number;
+  keys: ProductKey[];
+}
+
+export interface AddProductKeysRequest {
+  /** Newline-separated list of proxy keys */
+  keys: string;
+}
+
 export interface AdminStats {
   totalUsers: number;
   totalRevenue: number;

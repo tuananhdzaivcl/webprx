@@ -16,7 +16,8 @@ Monorepo (pnpm workspaces) with:
 - Public catalog: 4 categories × 10 products (Aim Cổ Antenna, AimDrag No Antenna, Aim Body Xoá Máu Vàng, Sỉ key SLL).
 - Auth: register/login/logout via cookie session (`tap_sid`, httpOnly, 30 days). bcrypt password hashes.
 - Customer deposit flow: user submits deposit request → admin approves → balance credited and 20% referral commission paid to referrer if any.
-- Customer purchase flow: order deducts balance, decrements stock, creates a unique `KEY-...` code.
+- Customer purchase flow: order deducts balance and either pops a real key from the product's key pool (if admin has uploaded keys) or generates a fallback `KEY-...` code if pool is empty. Stock auto-shows remaining unused keys when a pool exists.
+- Admin key pool management: per-product dialog (key icon button) to paste in proxy keys (one per line), see used/available counts, and delete unused keys. Used keys are protected from deletion.
 - Affiliate referral system: each user has a referralCode + shareable link `/dang-ky?ref=CODE`. 20% commission of approved deposits credited to referrer.
 - Admin panel (`/admin`): stats overview, user balance adjust (add/subtract with reason), deposit approve/reject, product CRUD.
 - Floating Zalo chat button (0339651811) and mobile bottom nav.
@@ -31,7 +32,7 @@ Auto-seeded on API startup if absent.
 QR code at `/qr-payment.jpeg` (LUONG TUAN ANH 0339651811).
 
 ## Database
-Postgres via `DATABASE_URL`. Tables: users, sessions, categories, products, orders, deposits, transactions, referral_commissions. Run `pnpm --filter @workspace/db run push` after schema changes.
+Postgres via `DATABASE_URL`. Tables: users, sessions, categories, products, product_keys, orders, deposits, transactions, referral_commissions. Run `pnpm --filter @workspace/db run push` after schema changes.
 
 ## Codegen
 After editing `lib/api-spec/openapi.yaml`:

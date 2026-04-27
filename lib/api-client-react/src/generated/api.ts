@@ -18,6 +18,7 @@ import type {
 
 import type {
   AccountSummary,
+  AddProductKeysRequest,
   AdjustBalanceRequest,
   AdminStats,
   AdminUser,
@@ -31,6 +32,7 @@ import type {
   Ok,
   Order,
   Product,
+  ProductKeyList,
   ReferralSummary,
   RegisterRequest,
   Transaction,
@@ -1853,6 +1855,266 @@ export const useAdminDeleteProduct = <
   TContext
 > => {
   return useMutation(getAdminDeleteProductMutationOptions(options));
+};
+
+/**
+ * @summary List proxy keys in stock for a product
+ */
+export const getAdminListProductKeysUrl = (id: number) => {
+  return `/api/admin/products/${id}/keys`;
+};
+
+export const adminListProductKeys = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ProductKeyList> => {
+  return customFetch<ProductKeyList>(getAdminListProductKeysUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminListProductKeysQueryKey = (id: number) => {
+  return [`/api/admin/products/${id}/keys`] as const;
+};
+
+export const getAdminListProductKeysQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListProductKeys>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListProductKeys>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminListProductKeysQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListProductKeys>>
+  > = ({ signal }) => adminListProductKeys(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListProductKeys>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListProductKeysQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListProductKeys>>
+>;
+export type AdminListProductKeysQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List proxy keys in stock for a product
+ */
+
+export function useAdminListProductKeys<
+  TData = Awaited<ReturnType<typeof adminListProductKeys>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListProductKeys>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListProductKeysQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add proxy keys to product stock (one per line)
+ */
+export const getAdminAddProductKeysUrl = (id: number) => {
+  return `/api/admin/products/${id}/keys`;
+};
+
+export const adminAddProductKeys = async (
+  id: number,
+  addProductKeysRequest: AddProductKeysRequest,
+  options?: RequestInit,
+): Promise<ProductKeyList> => {
+  return customFetch<ProductKeyList>(getAdminAddProductKeysUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addProductKeysRequest),
+  });
+};
+
+export const getAdminAddProductKeysMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminAddProductKeys>>,
+    TError,
+    { id: number; data: BodyType<AddProductKeysRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminAddProductKeys>>,
+  TError,
+  { id: number; data: BodyType<AddProductKeysRequest> },
+  TContext
+> => {
+  const mutationKey = ["adminAddProductKeys"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminAddProductKeys>>,
+    { id: number; data: BodyType<AddProductKeysRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminAddProductKeys(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminAddProductKeysMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminAddProductKeys>>
+>;
+export type AdminAddProductKeysMutationBody = BodyType<AddProductKeysRequest>;
+export type AdminAddProductKeysMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add proxy keys to product stock (one per line)
+ */
+export const useAdminAddProductKeys = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminAddProductKeys>>,
+    TError,
+    { id: number; data: BodyType<AddProductKeysRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminAddProductKeys>>,
+  TError,
+  { id: number; data: BodyType<AddProductKeysRequest> },
+  TContext
+> => {
+  return useMutation(getAdminAddProductKeysMutationOptions(options));
+};
+
+/**
+ * @summary Delete a single (unused) proxy key
+ */
+export const getAdminDeleteProductKeyUrl = (id: number, keyId: number) => {
+  return `/api/admin/products/${id}/keys/${keyId}`;
+};
+
+export const adminDeleteProductKey = async (
+  id: number,
+  keyId: number,
+  options?: RequestInit,
+): Promise<Ok> => {
+  return customFetch<Ok>(getAdminDeleteProductKeyUrl(id, keyId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteProductKeyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteProductKey>>,
+    TError,
+    { id: number; keyId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteProductKey>>,
+  TError,
+  { id: number; keyId: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteProductKey"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteProductKey>>,
+    { id: number; keyId: number }
+  > = (props) => {
+    const { id, keyId } = props ?? {};
+
+    return adminDeleteProductKey(id, keyId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteProductKeyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteProductKey>>
+>;
+
+export type AdminDeleteProductKeyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a single (unused) proxy key
+ */
+export const useAdminDeleteProductKey = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteProductKey>>,
+    TError,
+    { id: number; keyId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteProductKey>>,
+  TError,
+  { id: number; keyId: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteProductKeyMutationOptions(options));
 };
 
 /**
