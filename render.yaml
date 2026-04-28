@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: tuananhproxy
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: corepack enable && corepack prepare pnpm@10.26.1 --activate && pnpm run render:build
+    startCommand: pnpm run render:start
+    healthCheckPath: /api/healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: BASE_PATH
+        value: /
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false

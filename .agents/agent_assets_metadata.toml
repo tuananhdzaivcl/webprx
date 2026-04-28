@@ -17,4 +17,10 @@ title = "TUANANHPROXY — Frontend (part 1/2)"
 id = "J5n1EN8E_hvYyB_uTMpzB"
 uri = "file://tuananhproxy-part2-backend.zip"
 type = "unspecified"
-title = "TUANANHPROXY — Backend + libs (part 2/2)"
+title = "TUANANHPROXY — Backend + libs + DEPLOY.md (part 2/2)"
+
+[[outputs]]
+id = "hirK5jeY4Jghn_4mvBgWp"
+uri = "file://DEPLOY.md"
+type = "text"
+title = "Hướng dẫn deploy miễn phí"

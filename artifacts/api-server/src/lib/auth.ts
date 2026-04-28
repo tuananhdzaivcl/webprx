@@ -23,10 +23,11 @@ export function newReferralCode(): string {
 export async function createSession(userId: number, res: Response): Promise<string> {
   const id = randomBytes(32).toString("hex");
   await db.insert(sessionsTable).values({ id, userId });
+  const isProd = process.env["NODE_ENV"] === "production";
   res.cookie(SESSION_COOKIE, id, {
     httpOnly: true,
     sameSite: "lax",
-    secure: false,
+    secure: isProd,
     maxAge: SESSION_TTL_DAYS * 24 * 60 * 60 * 1000,
     path: "/",
   });

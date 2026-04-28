@@ -45,6 +45,13 @@ This regenerates Zod, types, and React hooks for all consumers.
 - `artifacts/api-server: API Server` — Express on `/api`
 - `artifacts/tuananhproxy: web` — Vite dev server on `/`
 
+## Free hosting deploy (Render + Neon)
+See `DEPLOY.md` for the step-by-step Vietnamese guide. In production, the Express server (`artifacts/api-server`) also serves the built React app (`artifacts/tuananhproxy/dist/public`) and falls back to `index.html` for SPA routes. `render.yaml` defines a one-click Blueprint deploy. Cookies are `secure: true` and Express has `trust proxy: 1` when `NODE_ENV=production`.
+
+Build & start commands (also in package.json):
+- `pnpm run render:build` — installs deps, runs `drizzle push`, builds frontend then backend.
+- `pnpm run render:start` — runs the bundled api-server which also serves the SPA.
+
 ## Notes
 - Free tier: only one artifact, web app only.
 - Numeric monetary columns are PG numeric; always coerce with `Number()` and write with `.toFixed(2)`.
