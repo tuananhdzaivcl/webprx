@@ -18,7 +18,7 @@ export default function AdminDeposits() {
   const handleAction = (id: number, action: 'approve' | 'reject') => {
     const mutation = action === 'approve' ? approveDeposit : rejectDeposit;
     mutation.mutate(
-      { depositId: id },
+      { id },
       {
         onSuccess: () => {
           toast({ title: "Thành công", description: `Đã ${action === 'approve' ? 'duyệt' : 'từ chối'} yêu cầu nạp tiền.` });
